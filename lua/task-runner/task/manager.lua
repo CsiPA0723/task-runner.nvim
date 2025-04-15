@@ -11,6 +11,16 @@ function M:setup(opts)
 	local dir_stat, err = vim.uv.fs_stat(opts.tasks_dir)
 	if dir_stat ~= nil and dir_stat.type == 'directory' then
 		M:load_modules(opts)
+
+		vim.api.nvim_create_user_command('Tasks', function(input)
+			require('task-runner.command').execute(input)
+		end, {
+			nargs = '*',
+			complete = function(...)
+				return require('task-runner.command').complete(...)
+			end,
+			desc = 'Tasks',
+		})
 	else
 		if err ~= nil then
 			vim.notify(err, vim.log.levels.ERROR, { group = notify.group })

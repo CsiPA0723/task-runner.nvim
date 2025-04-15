@@ -11,6 +11,4 @@ function M.setup(opts)
 	TaskManager:setup(M.config)
 end
 
-vim.api.nvim_create_user_command('Tasks', function() end, {})
-
 return M
