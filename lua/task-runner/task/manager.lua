@@ -48,19 +48,25 @@ function M:load_modules(opts)
 		{ key = notify.keys.module_loading, group = notify.group }
 	)
 
-	local files = scan.scan_dir(opts.tasks_dir, {
-		depth = opts.scan_depth or 1,
-	})
+	local files = scan.scan_dir(opts.tasks_dir, { depth = opts.scan_depth or 1 })
 
-	for _, path in ipairs(files) do
-		M:load_module(path, opts)
+	if #files > 0 then
+		for _, path in ipairs(files) do
+			M:load_module(path, opts)
+		end
+
+		vim.notify(
+			'Loaded modules!',
+			vim.log.levels.INFO,
+			{ key = notify.keys.module_loading, group = notify.group }
+		)
+	else
+		vim.notify(
+			'No modules found!',
+			vim.log.levels.INFO,
+			{ key = notify.keys.module_loading, group = notify.group }
+		)
 	end
-
-	vim.notify(
-		'Loaded modules!',
-		vim.log.levels.INFO,
-		{ key = notify.keys.module_loading, group = notify.group }
-	)
 end
 
 ---@param path string
