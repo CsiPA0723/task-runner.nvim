@@ -17,8 +17,7 @@
     -- 'nvim-telescope/telescope.nvim',
     -- 'ibhagwan/fzf-lua',
   },
-  lazy = true,
-  cmd = { 'Tasks' },
+  event = 'VeryLazy',
   ---@type TaskRunner.config
   opts = {},
 }
