@@ -1,7 +1,8 @@
 local job = require('plenary.job')
 local notify = require('task-runner.notify')
 
----@class TaskRunner.TaskConfig
+---@class TaskRunner.Task
+---@field name? string
 ---@field command string Command to run
 ---@field cond? fun(self: TaskRunner.Task): boolean
 ---@field args? string[] List of arguments to pass
@@ -9,37 +10,32 @@ local notify = require('task-runner.notify')
 ---@field env? table<string, string>|string[] Environment looking like: { ['VAR'] = 'VALUE' } or { 'VAR=VALUE' }
 ---@field on_stdout? fun(error: string, data: string)
 
----@class TaskRunner.Task: TaskRunner.TaskConfig
+---@class TaskRunner.Task
 local M = {}
 
----@param file TaskRunner.TaskConfig
 ---@param name string
----@return TaskRunner.Task
-function M:new(file, name)
-	self.name = name
-	self.command = file.command
-	self.args = file.args or {}
-	self.cwd = file.cwd or vim.loop.cwd()
-	self.env = file.env or {}
-	self.on_stdout = file.on_stdout
-		or function(_, data)
+---@param opts TaskRunner.Task
+function M:new(name, opts)
+	opts = vim.tbl_deep_extend('force', {
+		name = name,
+		args = {},
+		cwd = vim.loop.cwd(),
+		env = {},
+		on_stdout = function(_, data)
 			vim.notify(data, vim.log.levels.INFO, {
-				title = self.name,
-				annote = self.name,
+				title = opts.name,
+				annote = opts.name,
 				group = notify.group,
 			})
-		end
-	self.cond = type(file.cond) == 'function' and file.cond
-		or function()
-			return true
-		end
-
-	return setmetatable(self, {
-		__index = M,
-		__tostring = function()
-			return self.name
 		end,
-	})
+		cond = function()
+			return true
+		end,
+	}, opts or {})
+
+	setmetatable(opts, self)
+	self.__index = self
+	return opts
 end
 
 function M:run()
@@ -79,9 +75,9 @@ function M:run()
 		:start()
 end
 
----@param task TaskRunner.TaskConfig
 ---@param name string
-function M.assert(task, name)
+---@param task TaskRunner.Task
+function M.assert(name, task)
 	local is_valid = true
 	local err = name
 	if type(task.command) ~= 'string' then
@@ -97,6 +93,10 @@ function M.assert(task, name)
 		is_valid = false
 	end
 	return is_valid, err
+end
+
+function M:__tostring()
+	return self.name
 end
 
 return M
