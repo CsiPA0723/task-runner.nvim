@@ -1,16 +1,16 @@
-local manager = require('task-runner.task.manager')
-local notify = require('task-runner.notify')
-local picker = require('task-runner.picker')
+local Manager = require('task-runner.task.manager')
+local Notify = require('task-runner.notify')
+local Picker = require('task-runner.task.picker')
 
 local M = {}
 
 ---@param input vim.api.keyset.create_user_command.command_args
 function M.execute(input)
-	manager:reload_modules()
+	Manager:reload_modules()
 	-- Only Tasks was supplied
 	-- Use provider to choose which tasks to run
 	if input.args:match('^%s*$') then
-		picker.open()
+		Picker.open()
 	else -- Tasks <module> <task>
 		local ret = M.parse(input.args)
 		if ret.module ~= nil then
@@ -20,14 +20,14 @@ function M.execute(input)
 				vim.notify(
 					'No task found!\nNamed: ' .. ret.__task_name,
 					vim.log.levels.ERROR,
-					{ group = notify.group }
+					{ group = Notify.group }
 				)
 			end
 		else
 			vim.notify(
 				'No module found!\nNamed: ' .. ret.__module_name,
 				vim.log.levels.ERROR,
-				{ group = notify.group }
+				{ group = Notify.group }
 			)
 		end
 	end
@@ -37,7 +37,7 @@ end
 function M.parse(input)
 	local fragments = vim.split(input, ' ', { plain = true, trimempty = true })
 	local module_name, task_name = fragments[1], fragments[2]
-	local modules = manager:get_modules()
+	local modules = Manager:get_modules()
 	local module = modules[module_name] or nil
 	return {
 		__modules = modules,

@@ -1,5 +1,5 @@
-local job = require('plenary.job')
-local notify = require('task-runner.notify')
+local Job = require('plenary.job')
+local Notify = require('task-runner.notify')
 
 ---@class TaskRunner.Task
 ---@field name? string
@@ -25,7 +25,7 @@ function M:new(name, opts)
 			vim.notify(data, vim.log.levels.INFO, {
 				title = opts.name,
 				annote = opts.name,
-				group = notify.group,
+				group = Notify.group,
 			})
 		end,
 		cond = function()
@@ -39,40 +39,38 @@ function M:new(name, opts)
 end
 
 function M:run()
-	job
-		:new({
-			command = self.command,
-			args = self.args,
-			cwd = self.cwd,
-			env = self.env,
-			on_stdout = vim.schedule_wrap(self.on_stdout),
-			on_start = vim.schedule_wrap(function()
-				vim.notify('Started...', vim.log.levels.INFO, {
+	Job:new({
+		command = self.command,
+		args = self.args,
+		cwd = self.cwd,
+		env = self.env,
+		on_stdout = vim.schedule_wrap(self.on_stdout),
+		on_start = vim.schedule_wrap(function()
+			vim.notify('Started...', vim.log.levels.INFO, {
+				title = self.name,
+				annote = self.name,
+				key = self.name .. 'Job',
+				group = Notify.group,
+			})
+		end),
+		on_exit = vim.schedule_wrap(function(_, return_val)
+			if return_val == 0 then
+				vim.notify('Finished', vim.log.levels.INFO, {
 					title = self.name,
 					annote = self.name,
 					key = self.name .. 'Job',
-					group = notify.group,
+					group = Notify.group,
 				})
-			end),
-			on_exit = vim.schedule_wrap(function(_, return_val)
-				if return_val == 0 then
-					vim.notify('Finished', vim.log.levels.INFO, {
-						title = self.name,
-						annote = self.name,
-						key = self.name .. 'Job',
-						group = notify.group,
-					})
-				else
-					vim.notify('Failed', vim.log.levels.ERROR, {
-						title = self.name,
-						annote = self.name,
-						key = self.name .. 'Job',
-						group = notify.group,
-					})
-				end
-			end),
-		})
-		:start()
+			else
+				vim.notify('Failed', vim.log.levels.ERROR, {
+					title = self.name,
+					annote = self.name,
+					key = self.name .. 'Job',
+					group = Notify.group,
+				})
+			end
+		end),
+	}):start()
 end
 
 ---@param name string

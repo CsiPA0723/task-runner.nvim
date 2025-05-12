@@ -1,6 +1,6 @@
 local Module = require('task-runner.module')
-local notify = require('task-runner.notify')
-local scan = require('plenary.scandir')
+local Notify = require('task-runner.notify')
+local Scan = require('plenary.scandir')
 
 ---@class TaskRunner.TaskManager
 ---@field private opts TaskRunner.config
@@ -25,12 +25,12 @@ function M:setup(opts)
 		})
 	else
 		if err ~= nil then
-			vim.notify(err, vim.log.levels.ERROR, { group = notify.group })
+			vim.notify(err, vim.log.levels.ERROR, { group = Notify.group })
 		end
 		vim.notify(
 			'Failed to setup plugin!',
 			vim.log.levels.ERROR,
-			{ group = notify.group }
+			{ group = Notify.group }
 		)
 	end
 end
@@ -44,11 +44,11 @@ function M:load_modules(opts)
 	opts = vim.tbl_extend('force', self.opts, opts or {})
 	vim.notify(
 		'Loading modules...',
-		vim.log.levels.INFO,
-		{ key = notify.keys.module_loading, group = notify.group }
+		vim.log.levels.DEBUG,
+		{ key = Notify.keys.module_loading, group = Notify.group }
 	)
 
-	local files = scan.scan_dir(opts.tasks_dir, { depth = opts.scan_depth or 1 })
+	local files = Scan.scan_dir(opts.tasks_dir, { depth = opts.scan_depth or 1 })
 
 	if #files > 0 then
 		for _, path in ipairs(files) do
@@ -57,14 +57,14 @@ function M:load_modules(opts)
 
 		vim.notify(
 			'Loaded modules!',
-			vim.log.levels.INFO,
-			{ key = notify.keys.module_loading, group = notify.group }
+			vim.log.levels.DEBUG,
+			{ key = Notify.keys.module_loading, group = Notify.group }
 		)
 	else
 		vim.notify(
 			'No modules found!',
-			vim.log.levels.INFO,
-			{ key = notify.keys.module_loading, group = notify.group }
+			vim.log.levels.DEBUG,
+			{ key = Notify.keys.module_loading, group = Notify.group }
 		)
 	end
 end
@@ -79,7 +79,7 @@ function M:load_module(path, opts)
 		vim.notify(
 			'Module loading failed: ' .. file,
 			vim.log.levels.ERROR,
-			{ group = notify.group }
+			{ group = Notify.group }
 		)
 	else
 		local is_valid, err = Module.assert(path, file)
@@ -90,7 +90,7 @@ function M:load_module(path, opts)
 			vim.notify(
 				'Module is not valid: ' .. err,
 				vim.log.levels.ERROR,
-				{ group = notify.group }
+				{ group = Notify.group }
 			)
 		end
 	end
@@ -104,7 +104,7 @@ function M:reload_modules(opts)
 			vim.notify(
 				'Reloading module: ' .. name,
 				vim.log.levels.INFO,
-				{ group = notify.group }
+				{ group = Notify.group }
 			)
 			M:load_module(module:get_path(), opts)
 		end

@@ -36,7 +36,7 @@ function M:new(path, file, opts)
 	return opts
 end
 
---- Returns true if the module's hash is different
+---@return boolean # true if the module's hash is different
 function M:check_hash()
 	local hash = vim.fn.sha256(vim.inspect(self.path))
 	return hash ~= self.hash
