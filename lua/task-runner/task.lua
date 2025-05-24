@@ -16,85 +16,85 @@ local M = {}
 ---@param name string
 ---@param opts TaskRunner.Task
 function M:new(name, opts)
-	opts = vim.tbl_deep_extend('force', {
-		name = name,
-		args = {},
-		cwd = vim.loop.cwd(),
-		env = {},
-		on_stdout = function(_, data)
-			vim.notify(data, vim.log.levels.INFO, {
-				title = opts.name,
-				annote = opts.name,
-				group = Notify.group,
-			})
-		end,
-		cond = function()
-			return true
-		end,
-	}, opts or {})
+   opts = vim.tbl_deep_extend('force', {
+      name = name,
+      args = {},
+      cwd = vim.loop.cwd(),
+      env = {},
+      on_stdout = function(_, data)
+         vim.notify(data, vim.log.levels.INFO, {
+            title = opts.name,
+            annote = opts.name,
+            group = Notify.group,
+         })
+      end,
+      cond = function()
+         return true
+      end,
+   }, opts or {})
 
-	setmetatable(opts, self)
-	self.__index = self
-	return opts
+   setmetatable(opts, self)
+   self.__index = self
+   return opts
 end
 
 function M:run()
-	Job:new({
-		command = self.command,
-		args = self.args,
-		cwd = self.cwd,
-		env = self.env,
-		on_stdout = vim.schedule_wrap(self.on_stdout),
-		on_start = vim.schedule_wrap(function()
-			vim.notify('Started...', vim.log.levels.INFO, {
-				title = self.name,
-				annote = self.name,
-				key = self.name .. 'Job',
-				group = Notify.group,
-			})
-		end),
-		on_exit = vim.schedule_wrap(function(_, return_val)
-			if return_val == 0 then
-				vim.notify('Finished', vim.log.levels.INFO, {
-					title = self.name,
-					annote = self.name,
-					key = self.name .. 'Job',
-					group = Notify.group,
-				})
-			else
-				vim.notify('Failed', vim.log.levels.ERROR, {
-					title = self.name,
-					annote = self.name,
-					key = self.name .. 'Job',
-					group = Notify.group,
-				})
-			end
-		end),
-	}):start()
+   Job:new({
+      command = self.command,
+      args = self.args,
+      cwd = self.cwd,
+      env = self.env,
+      on_stdout = vim.schedule_wrap(self.on_stdout),
+      on_start = vim.schedule_wrap(function()
+         vim.notify('Started...', vim.log.levels.INFO, {
+            title = self.name,
+            annote = self.name,
+            key = self.name .. 'Job',
+            group = Notify.group,
+         })
+      end),
+      on_exit = vim.schedule_wrap(function(_, return_val)
+         if return_val == 0 then
+            vim.notify('Finished', vim.log.levels.INFO, {
+               title = self.name,
+               annote = self.name,
+               key = self.name .. 'Job',
+               group = Notify.group,
+            })
+         else
+            vim.notify('Failed', vim.log.levels.ERROR, {
+               title = self.name,
+               annote = self.name,
+               key = self.name .. 'Job',
+               group = Notify.group,
+            })
+         end
+      end),
+   }):start()
 end
 
 ---@param name string
 ---@param task TaskRunner.Task
 function M.assert(name, task)
-	local is_valid = true
-	local err = name
-	if type(task.command) ~= 'string' then
-		err = err .. '\nTask must have a command string'
-		is_valid = false
-	end
-	if task.args and type(task.args) ~= 'table' then
-		err = err .. '\nTask args must be a table'
-		is_valid = false
-	end
-	if task.cwd and type(task.cwd) ~= 'string' then
-		err = err .. '\nTask cwd must be a string'
-		is_valid = false
-	end
-	return is_valid, err
+   local is_valid = true
+   local err = name
+   if type(task.command) ~= 'string' then
+      err = err .. '\nTask must have a command string'
+      is_valid = false
+   end
+   if task.args and type(task.args) ~= 'table' then
+      err = err .. '\nTask args must be a table'
+      is_valid = false
+   end
+   if task.cwd and type(task.cwd) ~= 'string' then
+      err = err .. '\nTask cwd must be a string'
+      is_valid = false
+   end
+   return is_valid, err
 end
 
 function M:__tostring()
-	return self.name
+   return self.name
 end
 
 return M

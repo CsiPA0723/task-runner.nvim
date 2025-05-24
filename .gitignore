@@ -1,3 +1,7 @@
+# General
+!.editorconfig
+!.stylua.toml
+
 # Compiled Lua sources
 luac.out
 
