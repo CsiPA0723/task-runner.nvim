@@ -13,6 +13,7 @@ function M:setup(opts)
    if dir_stat ~= nil and dir_stat.type == 'directory' then
       self.opts = opts
       M:load_modules(opts)
+      require('task-runner.task.picker').setup(opts)
 
       vim.api.nvim_create_user_command('Tasks', function(input)
          require('task-runner.command').execute(input)
