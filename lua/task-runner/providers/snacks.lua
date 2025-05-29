@@ -1,4 +1,5 @@
 local M = {}
+
 function M.pick(opts)
    require('snacks.picker').pick({
       items = vim.tbl_map(function(item)
