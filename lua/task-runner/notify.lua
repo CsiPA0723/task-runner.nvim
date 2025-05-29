@@ -1,3 +1,4 @@
+---@class TaskRunner.notify
 local M = {
    group = 'TaskRunner',
    keys = {

@@ -1,13 +1,11 @@
 local M = {}
 
-M.default_config = require('task-runner.config')
-M.config = M.default_config
-
+M.config = require('task-runner.config')
 local TaskManager = require('task-runner.task.manager')
 
 ---@param opts? TaskRunner.config
 function M.setup(opts)
-   M.config = vim.tbl_deep_extend('force', M.default_config, opts or {})
+   M.config = vim.tbl_deep_extend('force', M.config, opts or {})
    TaskManager:setup(M.config)
 end
 
