@@ -2,14 +2,14 @@
 return {
    name = 'Testing_Module',
    tasks = {
-      asder = {
+      echo = {
          command = 'echo',
-         args = { 'asd' },
+         args = { 'Hello World!' },
       },
       list = {
          command = 'ls',
          args = { '-la' },
-         cwd = '~/.config/nvim',
+         cwd = vim.fn.expand(vim.fn.stdpath('config')),
       },
    },
 }
