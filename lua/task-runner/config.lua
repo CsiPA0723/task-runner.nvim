@@ -7,7 +7,7 @@ local Config = {
    tasks_dir = vim.fn.stdpath('config') .. '/tasks',
    ---The scan depth of the tasks directory when loading the tasks initally (default: 1)
    scan_depth = 1,
-   ---snacks (default) | telescope | fzf_lua
+   ---Preferred provider: snacks (default) | telescope | fzf_lua
    provider = 'snacks',
 }
 
