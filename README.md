@@ -16,8 +16,10 @@
     'folke/snacks.nvim', -- (Default)
     -- 'nvim-telescope/telescope.nvim',
     -- 'ibhagwan/fzf-lua',
+    -- 'echasnovski/mini.pick'
   },
   event = 'VeryLazy',
+  ---@module 'TaskRunner'
   ---@type TaskRunner.config
   opts = {},
 }
@@ -25,7 +27,7 @@
 
 ## Acknowledgements
 
-- Lots of inspirations from [miroshQa/rittli.nvim](https://github.com/miroshQa/rittli.nvim)
+- Inspiration from [miroshQa/rittli.nvim](https://github.com/miroshQa/rittli.nvim)
 - User command handling from [folke/trouble.nvim](https://github.com/folke/trouble.nvim)
 - Picker provider handling from [2KAbhishek/pickme.nvim](https://github.com/2KAbhishek/pickme.nvim)
 

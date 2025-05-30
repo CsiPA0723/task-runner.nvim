@@ -2,7 +2,7 @@ local M = {}
 
 ---@type TaskRunner.picker.pick
 function M.pick(opts, modules)
-   -- TODO: implement telescope picker
+   -- TODO: Implement mini.picker
 end
 
 return M

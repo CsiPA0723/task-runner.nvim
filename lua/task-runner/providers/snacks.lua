@@ -1,29 +1,43 @@
 local M = {}
 
-function M.pick()
-   --[[ require('snacks.picker').pick({
-      items = vim.tbl_map(function(item)
-         return {
-            text = opts.entry_maker(item).display,
-            value = item,
-            preview = {
-               text = opts.preview_generator(item),
-               ft = opts.preview_ft or 'markdown',
-            },
+---@type TaskRunner.picker.pick
+function M.pick(opts, modules)
+   local tasks = {} ---@type snacks.picker.finder.Item[]
+
+   for module_name, module in pairs(modules) do
+      for task_name, task in pairs(module.tasks) do
+         tasks[#tasks + 1] = {
+            file = module:get_path(),
+            text = module_name .. ' > ' .. task_name,
+            task = task,
+            module = module,
          }
-      end, opts.items),
-      title = opts.title,
+      end
+   end
+
+   require('snacks.picker').pick({
+      items = tasks,
+      title = 'TaskRunner',
+      prompt = 'Run> ',
+      show_empty = true,
+      -- TODO: Custom format
       format = Snacks.picker.format.text,
-      preview = 'preview',
+      -- TODO: Add cursor positon
+      preview = Snacks.picker.preview.file,
+      win = {
+         input = { keys = { ['<c-e>'] = { 'edit', mode = { 'n', 'i' } } } },
+      },
       actions = {
-         confirm = function(_, selected)
-            if selected and selected.value then
-               vim.cmd('close')
-               opts.selection_handler(nil, { value = selected.value })
-            end
+         edit = function(picker, item)
+            picker:close()
+            vim.cmd.edit(item.file)
+         end,
+         confirm = function(picker, item)
+            picker:close()
+            item.task:run()
          end,
       },
-   }) ]]
+   })
 end
 
 return M

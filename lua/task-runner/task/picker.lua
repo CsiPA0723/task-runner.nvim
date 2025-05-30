@@ -1,23 +1,35 @@
+local Manager = require('task-runner.task.manager')
 local Notify = require('task-runner.notify')
 
+---@alias TaskRunner.picker.pick fun( opts: TaskRunner.config, modules: table<string, TaskRunner.Module>)
+
+---@class TaskRunner.picker
+---@field provider? 'snacks'|'telescope'|'fzf_lua'|'mini'
+---@field available_providers table<string, string>
 local M = {
-   priority = { 'snacks', 'telescope', 'fzf_lua' },
+   priority = { 'snacks', 'telescope', 'fzf_lua', 'mini' },
    provider_modules = {
       snacks = 'snacks.picker',
       telescope = 'telescope.pickers',
       fzf_lua = 'fzf-lua',
+      mini = 'mini.picker',
    },
-   ---@type string?
    provider = nil,
-   ---@type table<string, string>
-   --- snacks = 'task-runner.providers.snacks',
-   --- telescope = 'task-runner.providers.telescope',
-   --- fzf_lua = 'task-runner.providers.fzf_lua',
+   --- Possible providers
+   --- ```lua
+   --- {
+   ---   snacks = 'task-runner.providers.snacks',
+   ---   telescope = 'task-runner.providers.telescope',
+   ---   fzf_lua = 'task-runner.providers.fzf_lua',
+   ---   mini = 'task-runner.providers.mini',
+   --- }
+   --- ```
    available_providers = {},
 }
 
 ---@param opts TaskRunner.config
 function M.setup(opts)
+   M.config = opts
    M.provider = opts.provider
 
    local found = false
@@ -43,7 +55,7 @@ function M.setup(opts)
             return str ~= M.provider and M.available_providers[str] ~= nil
          end, M.priority)
          vim.notify(
-            M.provider
+            M.config.provider
                .. ' provider is not available. Falling back to '
                .. providers[1],
             vim.log.levels.WARN,
@@ -58,8 +70,10 @@ function M.open()
    if M.provider == nil then
       return
    end
+   ---@type string
    local picker_provider = M.available_providers[M.provider]
 
+   ---@type boolean, { pick: TaskRunner.picker.pick }
    local ok, picker = pcall(require, picker_provider)
 
    if not ok then
@@ -71,7 +85,7 @@ function M.open()
       return
    end
 
-   picker.pick()
+   picker.pick(M.config, Manager:get_modules())
 end
 
 return M
