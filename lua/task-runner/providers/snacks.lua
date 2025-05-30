@@ -1,7 +1,7 @@
 local M = {}
 
-function M.pick(opts)
-   require('snacks.picker').pick({
+function M.pick()
+   --[[ require('snacks.picker').pick({
       items = vim.tbl_map(function(item)
          return {
             text = opts.entry_maker(item).display,
@@ -23,7 +23,7 @@ function M.pick(opts)
             end
          end,
       },
-   })
+   }) ]]
 end
 
 return M
