@@ -1,4 +1,4 @@
-# Task-Runner.nvim
+# Task-Runner.nvim (Work In Progress)
 <!-- markdownlint-disable MD033 -->
 
 <a href="https://dotfyle.com/plugins/CsiPA0723/taskrunner.nvim"><img alt="used in configs" src="https://dotfyle.com/plugins/CsiPA0723/taskrunner.nvim/shield?style=for-the-badge" /></a> <!-- markdownlint-disable-line MD013 -->
