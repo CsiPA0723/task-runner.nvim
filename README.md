@@ -12,7 +12,7 @@
   'CsiPA0723/task-runner.nvim',
   dependencies = { 
     'nvim-lua/plenary.nvim',
-    -- Avaiable providers --
+    -- Available providers --
     'folke/snacks.nvim', -- (Default)
     -- 'nvim-telescope/telescope.nvim',
     -- 'ibhagwan/fzf-lua',
@@ -30,6 +30,24 @@
 - Inspiration from [miroshQa/rittli.nvim](https://github.com/miroshQa/rittli.nvim)
 - User command handling from [folke/trouble.nvim](https://github.com/folke/trouble.nvim)
 - Picker provider handling from [2KAbhishek/pickme.nvim](https://github.com/2KAbhishek/pickme.nvim)
+
+## Progress
+
+- [x] Command framework
+- [x] Picker framework
+- [ ] Finish documentation
+- [ ] Code Actions
+  - [ ] docs
+  - [ ] release
+- [ ] Pickers
+  - [x] snacks
+  - [ ] telescope
+  - [ ] fzf-lua
+  - [ ] mini.pick
+- [ ] More examples
+- [ ] Intro/preview gif/video
+- [ ] More...
+
 
 ## License
 
