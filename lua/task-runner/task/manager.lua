@@ -14,16 +14,6 @@ function M:setup(opts)
       self.opts = opts
       M:load_modules(opts)
       require('task-runner.task.picker').setup(opts)
-
-      vim.api.nvim_create_user_command('Tasks', function(input)
-         require('task-runner.command').execute(input)
-      end, {
-         nargs = '*',
-         complete = function(...)
-            return require('task-runner.command').complete(...)
-         end,
-         desc = 'Tasks',
-      })
    else
       if err ~= nil then
          vim.notify(err, vim.log.levels.ERROR, { group = Notify.group })
