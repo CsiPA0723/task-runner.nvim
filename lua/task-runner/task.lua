@@ -1,5 +1,5 @@
 local Job = require('plenary.job')
-local Notify = require('task-runner.notify')
+local Log = require('task-runner.logger')
 
 ---@class TaskRunner.Task
 ---@field name? string
@@ -22,11 +22,7 @@ function M:new(name, opts)
       cwd = vim.loop.cwd(),
       env = {},
       on_stdout = function(_, data)
-         vim.notify(data, vim.log.levels.INFO, {
-            title = opts.name,
-            annote = opts.name,
-            group = Notify.group,
-         })
+         Log.info(data, { title = opts.name, annote = opts.name })
       end,
       cond = function()
          return true
@@ -46,27 +42,24 @@ function M:run()
       env = self.env,
       on_stdout = vim.schedule_wrap(self.on_stdout),
       on_start = vim.schedule_wrap(function()
-         vim.notify('Started...', vim.log.levels.INFO, {
+         Log.info('Started...', {
             title = self.name,
             annote = self.name,
             key = self.name .. 'Job',
-            group = Notify.group,
          })
       end),
       on_exit = vim.schedule_wrap(function(_, return_val)
          if return_val == 0 then
-            vim.notify('Finished', vim.log.levels.INFO, {
+            Log.info('Finished', {
                title = self.name,
                annote = self.name,
                key = self.name .. 'Job',
-               group = Notify.group,
             })
          else
-            vim.notify('Failed', vim.log.levels.ERROR, {
+            Log.error('Failed', {
                title = self.name,
                annote = self.name,
                key = self.name .. 'Job',
-               group = Notify.group,
             })
          end
       end),

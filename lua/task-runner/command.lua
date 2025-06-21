@@ -1,5 +1,5 @@
+local Log = require('task-runner.logger')
 local Manager = require('task-runner.task.manager')
-local Notify = require('task-runner.notify')
 local Picker = require('task-runner.task.picker')
 
 local M = {}
@@ -17,18 +17,10 @@ function M.execute(input)
          if ret.task ~= nil then
             ret.task:run()
          else
-            vim.notify(
-               'No task found!\nNamed: ' .. ret.__task_name,
-               vim.log.levels.ERROR,
-               { group = Notify.group }
-            )
+            Log.error('No task found!\nNamed: ' .. ret.__task_name)
          end
       else
-         vim.notify(
-            'No module found!\nNamed: ' .. ret.__module_name,
-            vim.log.levels.ERROR,
-            { group = Notify.group }
-         )
+         Log.error('No module found!\nNamed: ' .. ret.__module_name)
       end
    end
 end

@@ -1,5 +1,5 @@
+local Log = require('task-runner.logger')
 local Manager = require('task-runner.task.manager')
-local Notify = require('task-runner.notify')
 
 ---@alias TaskRunner.picker.pick fun( opts: TaskRunner.config, modules: table<string, TaskRunner.Module>)
 
@@ -43,23 +43,20 @@ function M.setup(opts)
 
    if not found then
       if vim.tbl_count(M.available_providers) == 0 then
-         vim.notify(
+         Log.error(
             'No available providers found! Please install one of the following: '
-               .. vim.inspect(M.priority),
-            vim.log.levels.ERROR,
-            { group = Notify.group, timeout = 8000, title = 'Task Picker' }
+               .. vim.inspect(M.priority)
          )
          M.provider = nil
       else
          local providers = vim.tbl_filter(function(str)
             return str ~= M.provider and M.available_providers[str] ~= nil
          end, M.priority)
-         vim.notify(
+         Log.warn(
             M.config.provider
                .. ' provider is not available. Falling back to '
                .. providers[1],
-            vim.log.levels.WARN,
-            { group = Notify.group, timeout = 6000, title = 'Task Picker' }
+            { timeout = 6000, title = 'Task Picker' }
          )
          M.provider = providers[1]
       end
@@ -77,10 +74,9 @@ function M.open()
    local ok, picker = pcall(require, picker_provider)
 
    if not ok then
-      vim.notify(
+      Log.error(
          'Cannot load ' .. picker_provider .. 'picker',
-         vim.log.levels.ERROR,
-         { group = Notify.group, title = 'Task Picker' }
+         { title = 'Task Picker' }
       )
       return
    end
