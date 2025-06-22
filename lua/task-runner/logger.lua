@@ -13,7 +13,9 @@ local M = {
 ---@param opts Options?
 local function log(msg, level, opts)
    opts = vim.tbl_deep_extend('force', { group = M.group }, opts or {})
-   vim.notify(msg, level, opts)
+   vim.schedule(function()
+      vim.notify(msg, level, opts)
+   end)
 end
 
 ---@param msg string
