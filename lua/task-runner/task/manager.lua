@@ -28,7 +28,7 @@ end
 
 ---@param opts? TaskRunner.config
 function M:load_modules(opts)
-   opts = vim.tbl_extend('force', self.opts, opts or {})
+   opts = vim.tbl_deep_extend('force', self.opts, opts or {})
    Log.debug('Loading modules...', { key = Log.keys.module_loading })
 
    local files = Scan.scan_dir(opts.tasks_dir, { depth = opts.scan_depth or 1 })
@@ -47,25 +47,25 @@ end
 ---@param path string
 ---@param opts? TaskRunner.config
 function M:load_module(path, opts)
-   opts = vim.tbl_extend('force', self.opts, opts or {})
+   opts = vim.tbl_deep_extend('force', self.opts, opts or {})
    ---@type boolean, TaskRunner.Module
    local is_success, file = pcall(dofile, path)
    if not is_success then
       Log.error('Failed to load module: ' .. file)
    else
-      local is_valid, err = Module.assert(path, file)
+      local is_valid = Module.assert(path, file)
       if is_valid then
          local module = Module:new(path, file)
          self.modules[module.name] = module
       else
-         Log.error('Module is not valid: ' .. err)
+         Log.error('Module is not valid: ' .. path)
       end
    end
 end
 
 ---@param opts? TaskRunner.config
 function M:reload_modules(opts)
-   opts = vim.tbl_extend('force', self.opts, opts or {})
+   opts = vim.tbl_deep_extend('force', self.opts, opts or {})
    for name, module in pairs(self.modules) do
       if module:check_hash() then
          Log.info('Reloading module: ' .. name)

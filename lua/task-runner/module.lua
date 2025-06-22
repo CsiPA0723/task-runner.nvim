@@ -1,4 +1,5 @@
 local Task = require('task-runner.task')
+local Util = require('task-runner.util')
 
 ---@class TaskRunner.ModuleConfig
 ---@field name? string Defaults to the filename
@@ -26,7 +27,7 @@ function M:new(path, file, opts)
    }, opts or {})
 
    opts.path = path
-   opts.hash = vim.fn.sha256(vim.inspect(path))
+   opts.hash = vim.fn.sha256(vim.inspect(file))
    for name, task in pairs(file.tasks) do
       opts.tasks[name] = Task:new(name, task)
    end
@@ -38,8 +39,12 @@ end
 
 ---@return boolean # true if the module's hash is different
 function M:check_hash()
-   local hash = vim.fn.sha256(vim.inspect(self.path))
-   return hash ~= self.hash
+   local is_success, file = pcall(dofile, self.path)
+   local hash = nil
+   if is_success then
+      hash = vim.fn.sha256(vim.inspect(file))
+   end
+   return hash ~= self.hash and is_success
 end
 
 function M:get_path()
@@ -50,39 +55,26 @@ end
 ---@param file TaskRunner.ModuleConfig
 function M.assert(path, file)
    local is_valid = true
-   local err = file.name or vim.fn.fnamemodify(path, ':t')
-   if type(file) ~= 'table' then
-      err = err .. '\nModule must be a table'
-      is_valid = false
-   else
-      if file.name and type(file.name) == 'string' then
-         if string.match(file.name, '%s') ~= nil then
-            err = err
-               .. '\nModule.name cannot contain any whitespace characters'
-            is_valid = false
-         end
-      else
-         err = err .. '\nModule.name must be set and be a string'
-         is_valid = false
-      end
-      if file.cond and type(file.cond) ~= 'function' then
-         err = err .. '\nModule.cond must be a function'
-         is_valid = false
-      end
-      if type(file.tasks) ~= 'table' then
-         err = err .. '\nModule must have a tasks table'
-         is_valid = false
-      else
-         for name, task in pairs(file.tasks) do
-            local new_is_valid, new_err = Task.assert(name, task)
-            is_valid = is_valid and new_is_valid
-            if not new_is_valid then
-               err = err .. '\n' .. new_err
-            end
+   local name = file.name or vim.fn.fnamemodify(path, ':t')
+   ---@module 'fidget'
+   ---@type Options
+   local notify_opts = { title = name, annote = name }
+   is_valid = is_valid
+      and Util.check_type('Module', file, 'table', false, notify_opts)
+   if is_valid then
+      is_valid = is_valid
+         and Util.check_type('Name', file.name, 'string', false, notify_opts)
+      is_valid = is_valid
+         and Util.check_type('Cond', file.cond, 'callable', true, notify_opts)
+      is_valid = is_valid
+         and Util.check_type('Tasks', file.tasks, 'table', true, notify_opts)
+      if is_valid then
+         for task_name, task in pairs(file.tasks) do
+            is_valid = is_valid and Task.assert(task_name, task)
          end
       end
    end
-   return is_valid, err
+   return is_valid
 end
 
 function M:__tostring()

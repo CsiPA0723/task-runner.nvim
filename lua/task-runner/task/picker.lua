@@ -1,11 +1,12 @@
 local Log = require('task-runner.logger')
 local Manager = require('task-runner.task.manager')
 
----@alias TaskRunner.picker.pick fun( opts: TaskRunner.config, modules: table<string, TaskRunner.Module>)
+---@alias TaskRunner.picker.pick fun(opts: TaskRunner.config, modules: table<string, TaskRunner.Module>)
+---@alias TaskRunner.picker.providers 'snacks'|'telescope'|'fzf_lua'|'mini'
 
 ---@class TaskRunner.picker
----@field provider? 'snacks'|'telescope'|'fzf_lua'|'mini'
----@field available_providers table<string, string>
+---@field provider? TaskRunner.picker.providers
+---@field available_providers table<TaskRunner.picker.providers, string>
 local M = {
    priority = { 'snacks', 'telescope', 'fzf_lua', 'mini' },
    provider_modules = {
