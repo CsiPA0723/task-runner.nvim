@@ -11,12 +11,11 @@
 {
   'CsiPA0723/task-runner.nvim',
   dependencies = { 
-    'nvim-lua/plenary.nvim',
     -- Available providers --
     'folke/snacks.nvim', -- (Default)
-    -- 'nvim-telescope/telescope.nvim',
-    -- 'ibhagwan/fzf-lua',
-    -- 'echasnovski/mini.pick'
+    -- 'nvim-telescope/telescope.nvim', needs implementation
+    -- 'ibhagwan/fzf-lua', needs implementation
+    -- 'echasnovski/mini.pick', needs implementation
   },
   event = 'VeryLazy',
   ---@module 'TaskRunner'
@@ -40,6 +39,8 @@
   - [ ] fzf-lua
   - [ ] mini.pick
 - [ ] More examples
+- [ ] Local folder tasks?
+- [ ] VSCode tasks integration??
 - [ ] More...
 
 ## Acknowledgements

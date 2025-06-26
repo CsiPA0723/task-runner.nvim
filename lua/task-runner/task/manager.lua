@@ -1,6 +1,5 @@
 local Log = require('task-runner.logger')
 local Module = require('task-runner.module')
-local Scan = require('plenary.scandir')
 
 ---@class TaskRunner.TaskManager
 ---@field private opts TaskRunner.config
@@ -31,7 +30,7 @@ function M:load_modules(opts)
    opts = vim.tbl_deep_extend('force', self.opts, opts or {})
    Log.debug('Loading modules...', { key = Log.keys.module_loading })
 
-   local files = Scan.scan_dir(opts.tasks_dir, { depth = opts.scan_depth or 1 })
+   local files = vim.fn.glob(opts.tasks_dir .. '/*.lua', false, true)
 
    if #files > 0 then
       for _, path in ipairs(files) do
@@ -72,6 +71,12 @@ function M:reload_modules(opts)
          M:load_module(module:get_path(), opts)
       end
    end
+end
+
+---@param name string
+---@return TaskRunner.Module
+function M:get_module(name)
+   return self.modules[name]
 end
 
 return M

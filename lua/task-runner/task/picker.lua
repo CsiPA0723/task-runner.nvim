@@ -1,7 +1,7 @@
 local Log = require('task-runner.logger')
 local Manager = require('task-runner.task.manager')
 
----@alias TaskRunner.picker.pick fun(opts: TaskRunner.config, modules: table<string, TaskRunner.Module>)
+---@alias TaskRunner.picker.pick fun(opts: TaskRunner.config, module?: TaskRunner.Module)
 ---@alias TaskRunner.picker.providers 'snacks'|'telescope'|'fzf_lua'|'mini'
 
 ---@class TaskRunner.picker
@@ -64,7 +64,8 @@ function M.setup(opts)
    end
 end
 
-function M.open()
+---@param module? TaskRunner.Module
+function M.open(module)
    if M.provider == nil then
       return
    end
@@ -82,7 +83,7 @@ function M.open()
       return
    end
 
-   picker.pick(M.config, Manager:get_modules())
+   picker.pick(M.config, module)
 end
 
 return M

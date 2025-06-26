@@ -16,8 +16,10 @@ function M.execute(input)
       if ret.module ~= nil then
          if ret.task ~= nil then
             ret.task:run()
-         else
+         elseif ret.__task_name ~= nil then
             Log.error('No task found!\nNamed: ' .. ret.__task_name)
+         else
+            Picker.open(ret.module)
          end
       else
          Log.error('No module found!\nNamed: ' .. ret.__module_name)
