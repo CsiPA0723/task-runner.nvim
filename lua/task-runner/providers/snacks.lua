@@ -1,6 +1,6 @@
 local M = {}
 
----@type TaskRunner.picker.pick
+---@type TaskRunner.picker
 function M.pick(opts, filter_module)
    local tasks = {} ---@type snacks.picker.finder.Item[]
 
@@ -19,7 +19,7 @@ function M.pick(opts, filter_module)
    if filter_module ~= nil then
       populate_tasks(filter_module)
    else
-      local modules = require('task-runner.task.manager'):get_modules()
+      local modules = require('task-runner').get_modules()
       for _, module in pairs(modules) do
          populate_tasks(module)
       end
@@ -48,8 +48,8 @@ function M.pick(opts, filter_module)
          end,
          confirm = function(picker, item)
             picker:close()
-            local manager = require('task-runner.task.manager')
-            manager:get_module(item.module_name).tasks[item.task_name]:run()
+            local modules = require('task-runner').get_modules()
+            modules[item.module_name].tasks[item.task_name]:run()
          end,
       },
    })

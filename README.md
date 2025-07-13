@@ -17,7 +17,7 @@
     -- 'ibhagwan/fzf-lua', needs implementation
     -- 'echasnovski/mini.pick', needs implementation
   },
-  event = 'VeryLazy',
+  cmd = 'Tasks'
   ---@module 'TaskRunner'
   ---@type TaskRunner.config
   opts = {},
