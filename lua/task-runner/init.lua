@@ -370,7 +370,7 @@ end
 ---@class TaskRunner.ModuleConfig
 ---@field name? string Defaults to the filename
 ---@field cond? fun(self: TaskRunner.Module): boolean
----@field tasks table<string, any>
+---@field tasks table<string, TaskRunner.TaskConfig>
 
 ---@class TaskRunner.Module: TaskRunner.ModuleConfig
 ---@field private path string
@@ -393,7 +393,7 @@ function H.Module:new(path, file, opts)
    }, opts or {})
 
    opts.path = path
-   opts.hash = vim.fn.sha256(vim.inspect(file))
+   opts.hash = vim.fn.sha256(vim.fn.readblob(path))
    for name, task in pairs(file.tasks) do
       opts.tasks[name] = H.Task:new(name, task)
    end
@@ -405,10 +405,10 @@ end
 
 ---@return boolean # true if the module's hash is different
 function H.Module:check_hash()
-   local is_success, file = pcall(dofile, self.path)
+   local is_success = pcall(dofile, self.path)
    local hash = nil
    if is_success then
-      hash = vim.fn.sha256(vim.inspect(file))
+      hash = vim.fn.sha256(vim.fn.readblob(self.path))
    end
    return hash ~= self.hash and is_success
 end
@@ -438,7 +438,7 @@ end
 -- Task Class
 -- =============================================================================
 
----@class TaskRunner.Task
+---@class TaskRunner.TaskConfig
 ---@field name? string
 ---@field command string[] Command to run
 ---@field cond? fun(self: TaskRunner.Task): boolean
@@ -446,11 +446,12 @@ end
 ---@field env? table<string, string>|string[] Environment looking like: { ['VAR'] = 'VALUE' } or { 'VAR=VALUE' }
 ---@field on_stdout? fun(error: string, data: string)
 
----@class TaskRunner.Task
+---@class TaskRunner.Task : TaskRunner.TaskConfig
 H.Task = {}
 
 ---@param name string
----@param opts TaskRunner.Task
+---@param opts TaskRunner.TaskConfig
+---@return TaskRunner.Task
 function H.Task:new(name, opts)
    opts = vim.tbl_deep_extend('force', {
       name = name,
@@ -506,7 +507,7 @@ function H.Task:__tostring()
 end
 
 ---@param name string
----@param task TaskRunner.Task
+---@param task TaskRunner.TaskConfig
 function H.Task.assert(name, task)
    H.check_type(name .. '.command', task.command, 'table')
    H.check_type(name .. '.cwd', task.cwd, 'string', true)
