@@ -11,6 +11,8 @@ local H = {
    },
    ---@type string?
    picker = nil,
+   ---@type table<integer, uv.uv_process_t>
+   jobs = {},
 }
 
 ---@module 'fidget'
@@ -37,6 +39,16 @@ function TaskRunner.setup(config)
          return require('task-runner').complete(...)
       end,
       desc = 'Tasks',
+   })
+
+   local group = vim.api.nvim_create_augroup('TaskRunner', { clear = true })
+   vim.api.nvim_create_autocmd('VimLeave', {
+      group = group,
+      callback = function()
+         for _, handle in pairs(H.jobs) do
+            H.close_handle(handle)
+         end
+      end,
    })
 end
 
@@ -218,6 +230,7 @@ end
 H.default_config = vim.deepcopy(TaskRunner.config)
 
 ---@param config? TaskRunner.config
+---@return TaskRunner.config
 function H.setup_config(config)
    H.check_type('config', config, 'table', true)
    config =
@@ -363,6 +376,17 @@ function H.check_type(name, val, ref, allow_nil)
    H.error(string.format('`%s` should be %s, not %s', name, ref, type(val)))
 end
 
+---@param handle uv.uv_pipe_t|uv.uv_process_t
+function H.close_handle(handle)
+   if handle and not handle:is_closing() then
+      local type = handle:get_type()
+      if type == 'process' then
+         H.jobs[handle:get_pid()] = nil
+      end
+      handle:close()
+   end
+end
+
 -- =============================================================================
 -- Module class
 -- =============================================================================
@@ -440,11 +464,20 @@ end
 
 ---@class TaskRunner.TaskConfig
 ---@field name? string
----@field command string[] Command to run
+---@field command string Command to run
+---@field args? string[] Command to run
 ---@field cond? fun(self: TaskRunner.Task): boolean
+---If true, spawn the child process in a detached state -                                                                                                                                       │
+---this will make it a process group leader, and will effectively enable the                                                                                                                    │
+---child to keep running after the parent exits. Note that the child process                                                                                                                    │
+---will still keep the parent's event loop alive unless the parent process calls                                                                                                                │
+---`uv.unref()` on the child's process handle.
+---@field detached? boolean
 ---@field cwd? string Working directory for job
----@field env? table<string, string>|string[] Environment looking like: { ['VAR'] = 'VALUE' } or { 'VAR=VALUE' }
----@field on_stdout? fun(error: string, data: string)
+---@field env? table<string, string> Environment looking like: { ['VAR'] = 'VALUE' }
+---@field on_stdout? fun(data: string)
+---@field on_stderr? fun(error: string)
+---@field timeout? integer Run the command with a time limit in ms.
 
 ---@class TaskRunner.Task : TaskRunner.TaskConfig
 H.Task = {}
@@ -455,13 +488,22 @@ H.Task = {}
 function H.Task:new(name, opts)
    opts = vim.tbl_deep_extend('force', {
       name = name,
-      command = {},
+      command = 'echo',
+      args = { 'Testing' },
       cwd = vim.loop.cwd(),
       env = {},
-      on_stdout = function(_, data)
+      detached = false,
+      on_stdout = function(data)
          H.log(
             data,
             vim.log.levels.INFO,
+            { title = opts.name, annote = opts.name }
+         )
+      end,
+      on_stderr = function(err)
+         H.log(
+            (err or 'Error'),
+            vim.log.levels.ERROR,
             { title = opts.name, annote = opts.name }
          )
       end,
@@ -479,27 +521,99 @@ function H.Task:run()
    if not self:cond() then
       return
    end
+
+   local uv = vim.uv
    local notify_opts = {
       title = self.name,
       annote = self.name,
-      key = self.name .. 'Job',
    }
-   H.log('Started...', vim.log.levels.INFO, notify_opts)
-   local job = vim.system(self.command, {
-      cwd = self.cwd,
-      env = self.env,
-      stdout = self.on_stdout,
-   }, function(out)
-      if out.code == 0 then
-         H.schedule_log('Finished', vim.log.levels.INFO, notify_opts)
+
+   local ok, is_exe = pcall(vim.fn.executable, self.command)
+   if not ok and 1 ~= is_exe then
+      H.log(
+         'Command not found: ' .. self.command,
+         vim.log.levels.ERROR,
+         notify_opts
+      )
+      return
+   end
+
+   local notify_opts_with_key =
+      vim.tbl_extend('force', notify_opts, { key = self.name .. 'Job' })
+   H.log('Started...', vim.log.levels.INFO, notify_opts_with_key)
+
+   local stdout = uv.new_pipe()
+   local stderr = uv.new_pipe()
+   local stdio = { nil, stdout, stderr }
+   if not (stdout and stderr) then
+      H.error('Failed to create stdio')
+      return
+   end
+
+   ---@param err nil|string
+   ---@param chunk string|nil
+   local handle_stdout = vim.schedule_wrap(function(err, chunk)
+      if err then
+         H.log('stdout error:' .. err, vim.log.levels.ERROR, notify_opts)
+      elseif chunk then
+         self.on_stdout(chunk)
       else
-         H.schedule_log(
-            'Failed: ' .. out.stderr .. (out.stdout or ''),
-            vim.log.levels.ERROR,
-            notify_opts
-         )
+         H.log('Disconected stdout', vim.log.levels.DEBUG, notify_opts)
       end
    end)
+
+   ---@param err nil|string
+   ---@param chunk string|nil
+   local handle_stderr = vim.schedule_wrap(function(err, chunk)
+      if err then
+         H.log('stderr error:' .. err, vim.log.levels.ERROR, notify_opts)
+      elseif chunk then
+         self.on_stderr(chunk)
+      else
+         H.log('Disconected stderr', vim.log.levels.DEBUG, notify_opts)
+      end
+   end)
+
+   local handle, pid
+   ---@diagnostic disable-next-line missing-fields
+   handle, pid = uv.spawn(self.command, {
+      args = self.args,
+      cwd = self.cwd,
+      env = self.env,
+      detached = self.detached,
+      stdio = stdio,
+   }, function(code, signal)
+      if code == 0 then
+         H.schedule_log('Finished', vim.log.levels.INFO, notify_opts_with_key)
+      else
+         H.schedule_log('Error', vim.log.levels.ERROR, notify_opts_with_key)
+      end
+      H.schedule_log('Signal: ' .. signal, vim.log.levels.DEBUG, notify_opts)
+      stdout:read_stop()
+      stderr:read_stop()
+      H.close_handle(stdout)
+      H.close_handle(stderr)
+      H.close_handle(handle)
+   end)
+
+   H.jobs[pid] = handle
+   H.log('process opened: ' .. pid, vim.log.levels.DEBUG, notify_opts)
+
+   uv.read_start(stdout, handle_stdout)
+   uv.read_start(stderr, handle_stderr)
+
+   if type(self.timeout) == 'number' then
+      vim.fn.timer_start(self.timeout, function()
+         stdout:read_stop()
+         stderr:read_stop()
+         H.close_handle(stdout)
+         H.close_handle(stderr)
+         H.close_handle(handle)
+         H.schedule_log('Timeout', vim.log.levels.ERROR, notify_opts_with_key)
+      end)
+   end
+
+   uv.run()
 end
 
 function H.Task:__tostring()
@@ -509,7 +623,8 @@ end
 ---@param name string
 ---@param task TaskRunner.TaskConfig
 function H.Task.assert(name, task)
-   H.check_type(name .. '.command', task.command, 'table')
+   H.check_type(name .. '.command', task.command, 'string')
+   H.check_type(name .. '.args', task.args, 'table', true)
    H.check_type(name .. '.cwd', task.cwd, 'string', true)
    H.check_type(name .. '.env', task.env, 'table', true)
    H.check_type(name .. '.on_stdout', task.on_stdout, 'callable', true)
