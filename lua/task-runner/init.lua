@@ -467,10 +467,10 @@ end
 ---@field command string Command to run
 ---@field args? string[] Command to run
 ---@field cond? fun(self: TaskRunner.Task): boolean
----If true, spawn the child process in a detached state -                                                                                                                                       │
----this will make it a process group leader, and will effectively enable the                                                                                                                    │
----child to keep running after the parent exits. Note that the child process                                                                                                                    │
----will still keep the parent's event loop alive unless the parent process calls                                                                                                                │
+---If true, spawn the child process in a detached state -
+---this will make it a process group leader, and will effectively enable the
+---child to keep running after the parent exits. Note that the child process
+---will still keep the parent's event loop alive unless the parent process calls
 ---`uv.unref()` on the child's process handle.
 ---@field detached? boolean
 ---@field cwd? string Working directory for job
