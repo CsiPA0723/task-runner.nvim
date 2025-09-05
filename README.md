@@ -1,4 +1,4 @@
-# Task-Runner.nvim (Work In Progress)
+# Task-Runner.nvim
 <!-- markdownlint-disable MD033 -->
 
 <a href="https://dotfyle.com/plugins/CsiPA0723/task-runner.nvim"><img alt="used in config" src="https://dotfyle.com/plugins/CsiPA0723/task-runner.nvim/shield?style=for-the-badge" /></a><!-- markdownlint-disable-line MD013 -->
@@ -13,9 +13,9 @@
   dependencies = { 
     -- Available providers --
     'folke/snacks.nvim', -- (Default)
-    -- 'nvim-telescope/telescope.nvim', needs implementation
-    -- 'ibhagwan/fzf-lua', needs implementation
-    -- 'echasnovski/mini.pick', needs implementation
+    -- 'nvim-telescope/telescope.nvim',
+    -- 'ibhagwan/fzf-lua',
+    -- 'nvim-mini/mini.pick',
   },
   cmd = 'Tasks'
   ---@module 'TaskRunner'
@@ -35,9 +35,9 @@
   - [ ] release
 - [ ] Picker providers
   - [x] snacks
-  - [ ] telescope
-  - [ ] fzf-lua
-  - [ ] mini.pick
+  - [ ] telescope #1
+  - [ ] fzf-lua #2
+  - [ ] mini.pick #3
 - [ ] More examples
 - [ ] Local folder tasks?
 - [ ] VSCode tasks integration??
