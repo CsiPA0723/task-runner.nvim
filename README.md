@@ -35,9 +35,9 @@
   - [ ] release
 - [ ] Picker providers
   - [x] snacks
-  - [ ] telescope #1
-  - [ ] fzf-lua #2
-  - [ ] mini.pick #3
+  - [ ] telescope [Issue: #1](https://github.com/CsiPA0723/task-runner.nvim/issues/1)
+  - [ ] fzf-lua [Issue: #2](https://github.com/CsiPA0723/task-runner.nvim/issues/2)
+  - [ ] mini.pick [Issue: #3](https://github.com/CsiPA0723/task-runner.nvim/issues/3)
 - [ ] More examples
 - [ ] Local folder tasks?
 - [ ] VSCode tasks integration??
