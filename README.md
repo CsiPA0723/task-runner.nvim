@@ -28,20 +28,13 @@
 
 - [x] Command framework
 - [x] Picker framework
-- [ ] Finish documentation
-- [ ] Intro/preview gif/video
-- [ ] Github Code Actions
-  - [ ] docs
-  - [ ] release
-- [ ] Picker providers
+- [ ] Picker providers implemented
   - [x] snacks
   - [ ] telescope [Issue: #1](https://github.com/CsiPA0723/task-runner.nvim/issues/1)
   - [ ] fzf-lua [Issue: #2](https://github.com/CsiPA0723/task-runner.nvim/issues/2)
   - [ ] mini.pick [Issue: #3](https://github.com/CsiPA0723/task-runner.nvim/issues/3)
-- [ ] More examples
-- [ ] Local folder tasks?
-- [ ] VSCode tasks integration??
-- [ ] More...
+- [ ] Local folder tasks
+- [ ] VSCode tasks integration
 
 ## Acknowledgements
 
