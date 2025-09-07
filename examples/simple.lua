@@ -1,6 +1,6 @@
 ---@type TaskRunner.ModuleConfig
 return {
-   name = 'Testing_Module',
+   name = 'Example_Simple',
    tasks = {
       echo = { command = 'echo', args = { 'Hello World!' } },
       list = {

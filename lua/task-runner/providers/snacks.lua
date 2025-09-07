@@ -48,8 +48,29 @@ function M.pick(opts, filter_module)
          end,
          confirm = function(picker, item)
             picker:close()
-            local modules = require('task-runner').get_modules()
-            modules[item.module_name].tasks[item.task_name]:run()
+            local notify_opts = {
+               group = opts.notification.group,
+               title = opts.notification.title,
+            }
+            local module = require('task-runner').get_module(item.module_name)
+            if module == nil then
+               vim.notify(
+                  'Module not found: ' .. item.module_name,
+                  vim.log.levels.ERROR,
+                  notify_opts
+               )
+               return
+            end
+            local task = module.tasks[item.task_name]
+            if task == nil then
+               vim.notify(
+                  'Task not found: ' .. item.task_name,
+                  vim.log.levels.ERROR,
+                  notify_opts
+               )
+               return
+            end
+            task:run()
          end,
       },
    })

@@ -1,6 +1,8 @@
 local TaskRunner = {}
 local H = {
-   ---@type table<string, TaskRunner.Module>
+   ---@alias path string
+   ---Keys are the path to the module file
+   ---@type table<path, TaskRunner.Module>
    modules = nil,
    priority = { 'snacks', 'telescope', 'fzf_lua', 'mini' },
    provider_modules = {
@@ -22,21 +24,19 @@ local H = {
 function TaskRunner.setup(config)
    -- Export module
    _G.TaskRunner = TaskRunner
-
    -- Setup config
    config = H.setup_config(config)
-
    -- Apply config
    H.apply_config(config)
 
-   TaskRunner.load_modules()
+   H.setup_modules()
 
    vim.api.nvim_create_user_command('Tasks', function(input)
-      require('task-runner').execute(input)
+      H.execute(input)
    end, {
       nargs = '*',
       complete = function(...)
-         return require('task-runner').complete(...)
+         return H.complete(...)
       end,
       desc = 'Tasks',
    })
@@ -72,74 +72,9 @@ TaskRunner.config = {
    },
 }
 
-function TaskRunner.get_modules()
-   TaskRunner.check_modules()
-   return H.modules
-end
-
-function TaskRunner.check_modules()
-   local key = H.get_config().notification.keys.module_reload
-   local dir_stat, err = vim.uv.fs_stat(TaskRunner.config.options.tasks_dir)
-   if dir_stat ~= nil and dir_stat.type == 'directory' then
-      if H.modules == nil then
-         TaskRunner.load_modules()
-      else
-         for _, module in pairs(H.modules) do
-            if module:check_hash() then
-               local path = module:get_path()
-               local name = vim.fn.fnamemodify(path, ':t')
-               H.log(
-                  'Reloading module: ' .. name,
-                  vim.log.levels.INFO,
-                  { key = key .. name }
-               )
-               TaskRunner.load_module(module:get_path())
-               H.log(
-                  'Reloaded module: ' .. name,
-                  vim.log.levels.INFO,
-                  { key = key .. name }
-               )
-            end
-         end
-      end
-   else
-      H.log(err or 'Directory not accessable!', vim.log.levels.ERROR)
-   end
-end
-
-function TaskRunner.load_modules()
-   H.modules = {}
-   local config = H.get_config()
-
-   H.log(
-      'Loading modules...',
-      vim.log.levels.DEBUG,
-      { key = config.notification.keys.module_loading }
-   )
-
-   local files = vim.fn.glob(config.options.tasks_dir .. '/*.lua', false, true)
-
-   if #files > 0 then
-      for _, path in ipairs(files) do
-         TaskRunner.load_module(path)
-      end
-      H.log(
-         'Loaded modules!',
-         vim.log.levels.DEBUG,
-         { key = config.notification.keys.module_loading }
-      )
-   else
-      H.log(
-         'No modules found!',
-         vim.log.levels.WARN,
-         { key = config.notification.keys.module_loading }
-      )
-   end
-end
-
 ---@param path string
 function TaskRunner.load_module(path)
-   local key = H.get_config().notification.keys.module_reload
+   local config = H.get_config()
    ---@type boolean, TaskRunner.Module
    local is_success, file = pcall(dofile, path)
    if not is_success then
@@ -147,62 +82,32 @@ function TaskRunner.load_module(path)
       H.log(
          'Failed to load module: ' .. file,
          vim.log.levels.ERROR,
-         { key = key .. name }
+         { key = config.notification.keys.module_reload .. name }
       )
    else
       H.Module.assert(path, file)
       local module = H.Module:new(path, file)
-      H.modules[module.name] = module
+      H.modules[module:get_path()] = module
    end
 end
 
----@param input vim.api.keyset.create_user_command.command_args
-function TaskRunner.execute(input)
-   TaskRunner.check_modules()
-   -- Only Tasks was supplied
-   -- Use provider to choose which tasks to run
-   if input.args:match('^%s*$') then
-      TaskRunner.pick()
-   else -- Tasks <module> <task>
-      local ret = H.parse(input.args)
-      if ret.module ~= nil then
-         if ret.task ~= nil then
-            ret.task:run()
-         elseif ret.__task_name ~= nil then
-            H.log(
-               'No task found!\nNamed: ' .. ret.__task_name,
-               vim.log.levels.ERROR
-            )
-         else
-            TaskRunner.pick(ret.module)
-         end
-      else
-         H.log(
-            'No module found!\nNamed: ' .. ret.__module_name,
-            vim.log.levels.ERROR
-         )
+---Keys are the path to the module file
+---@return table<path, TaskRunner.Module>
+function TaskRunner.get_modules()
+   H.check_modules()
+   return H.modules
+end
+
+---@param name string
+---@return TaskRunner.Module?
+function TaskRunner.get_module(name)
+   local modules = TaskRunner.get_modules()
+   for _, module in pairs(modules) do
+      if module.name == name then
+         return module
       end
    end
-end
-
----@param prefix string
----@param line string
----@param col number
----@return string[]
-function TaskRunner.complete(prefix, line, col)
-   line = line:sub(1, col):match('Tasks%s*(.*)$')
-   local ret = H.parse(line)
-   local candidates = {} ---@type string[]
-   if not ret.module then
-      candidates = vim.list_extend(candidates, ret.modules or {})
-   else
-      candidates = vim.list_extend(candidates, ret.tasks or {})
-   end
-   candidates = vim.tbl_filter(function(x)
-      return tostring(x):find(prefix, 1, true) == 1
-   end, candidates)
-   table.sort(candidates)
-   return candidates
+   return nil
 end
 
 ---@param module? TaskRunner.Module
@@ -211,10 +116,8 @@ function TaskRunner.pick(module)
    if H.picker == nil then
       return
    end
-
    ---@type boolean, { pick: TaskRunner.picker }
    local ok, picker = pcall(require, H.picker)
-
    if not ok then
       H.log(
          'Cannot load ' .. H.picker .. 'picker',
@@ -223,7 +126,6 @@ function TaskRunner.pick(module)
       )
       return
    end
-
    picker.pick(H.get_config(), module)
 end
 
@@ -280,25 +182,127 @@ function H.apply_config(config)
    end
 end
 
+---@param input vim.api.keyset.create_user_command.command_args
+function H.execute(input)
+   H.check_modules()
+   -- Only Tasks was supplied
+   -- Use provider to choose which tasks to run
+   if input.args:match('^%s*$') then
+      TaskRunner.pick()
+   else -- Tasks <module> <task>
+      local ret = H.parse(input.args)
+      if ret.module == nil or ret.task == nil then
+         H.log(
+            'Not found ' .. ret.__module_name .. ' - ' .. ret.__task_name,
+            vim.log.levels.ERROR
+         )
+         TaskRunner.pick(ret.module)
+         return
+      end
+      if ret.module ~= nil and ret.task ~= nil then
+         ret.task:run()
+      end
+   end
+end
+
+---@param prefix string
+---@param line string
+---@param col number
+---@return string[]
+function H.complete(prefix, line, col)
+   line = line:sub(1, col):match('Tasks%s*(.*)$')
+   local ret = H.parse(line)
+   local candidates = {} ---@type string[]
+   if ret.module == nil then
+      ---@param module TaskRunner.Module
+      local modules = vim.tbl_values(vim.tbl_map(function(module)
+         return module.name
+      end, TaskRunner.get_modules()))
+      candidates = vim.list_extend(candidates, modules or {})
+   else
+      local tasks = vim.tbl_keys(ret.module.tasks)
+      candidates = vim.list_extend(candidates, tasks or {})
+   end
+   candidates = vim.tbl_filter(function(x)
+      return tostring(x):find(prefix, 1, true) == 1
+   end, candidates)
+   table.sort(candidates)
+   return candidates
+end
+
+function H.setup_modules()
+   H.modules = {}
+   local config = H.get_config()
+
+   H.log(
+      'Loading modules...',
+      vim.log.levels.INFO,
+      { key = config.notification.keys.module_loading }
+   )
+
+   local files = vim.fn.glob(config.options.tasks_dir .. '/*.lua', false, true)
+
+   if #files > 0 then
+      for _, path in ipairs(files) do
+         TaskRunner.load_module(path)
+      end
+      H.log(
+         'Loaded modules!',
+         vim.log.levels.INFO,
+         { key = config.notification.keys.module_loading }
+      )
+   else
+      H.log(
+         'No modules found!',
+         vim.log.levels.WARN,
+         { key = config.notification.keys.module_loading }
+      )
+   end
+end
+
+function H.check_modules()
+   local key = H.get_config().notification.keys.module_reload
+   local dir_stat, err = vim.uv.fs_stat(TaskRunner.config.options.tasks_dir)
+   if dir_stat ~= nil and dir_stat.type == 'directory' then
+      for _, module in pairs(H.modules) do
+         if module:check_hash() then
+            local path = module:get_path()
+            local name = vim.fn.fnamemodify(path, ':t')
+            H.log(
+               'Reloading module: ' .. name,
+               vim.log.levels.INFO,
+               { key = key .. name }
+            )
+            TaskRunner.load_module(module:get_path())
+            H.log(
+               'Reloaded module: ' .. name,
+               vim.log.levels.INFO,
+               { key = key .. name }
+            )
+         end
+      end
+   else
+      H.log(err or 'Directory not accessable!', vim.log.levels.ERROR)
+   end
+end
+
+---@alias TaskRunner.parse_output { __module_name: string, __task_name: string, module: TaskRunner.Module|nil, task: TaskRunner.Task|nil }
+
 ---@param input string
+---@return TaskRunner.parse_output
 function H.parse(input)
    local fragments = vim.split(input, ' ', { plain = true, trimempty = true })
    local module_name, task_name = fragments[1], fragments[2]
-   local modules = TaskRunner.get_modules()
-   local module = modules[module_name] or nil
+   local module = TaskRunner.get_module(module_name)
+   local task = module ~= nil
+         and not vim.tbl_isempty(module.tasks)
+         and module.tasks[task_name]
+      or nil
    return {
-      __modules = modules,
-      __fragments = fragments,
       __module_name = module_name,
       __task_name = task_name,
-      ---@type string[]
-      modules = vim.tbl_keys(modules),
-      ---@type TaskRunner.Module?
       module = module,
-      ---@type string[]?
-      tasks = module ~= nil and vim.tbl_keys(module.tasks) or nil,
-      ---@type TaskRunner.Task?
-      task = module ~= nil and module.tasks[task_name] or nil,
+      task = task,
    }
 end
 
@@ -397,8 +401,8 @@ end
 ---@field tasks table<string, TaskRunner.TaskConfig>
 
 ---@class TaskRunner.Module: TaskRunner.ModuleConfig
----@field private path string
----@field private hash string
+---@field private _path string
+---@field private _hash string
 ---@field tasks table<string, TaskRunner.Task>
 ---@field is_valid boolean
 H.Module = {}
@@ -416,8 +420,8 @@ function H.Module:new(path, file, opts)
       end,
    }, opts or {})
 
-   opts.path = path
-   opts.hash = vim.fn.sha256(vim.fn.readblob(path))
+   opts._path = path
+   opts._hash = vim.fn.sha256(vim.fn.readblob(path))
    for name, task in pairs(file.tasks) do
       opts.tasks[name] = H.Task:new(name, task)
    end
@@ -429,16 +433,16 @@ end
 
 ---@return boolean # true if the module's hash is different
 function H.Module:check_hash()
-   local is_success = pcall(dofile, self.path)
+   local is_success = pcall(dofile, self._path)
    local hash = nil
    if is_success then
-      hash = vim.fn.sha256(vim.fn.readblob(self.path))
+      hash = vim.fn.sha256(vim.fn.readblob(self._path))
    end
-   return hash ~= self.hash and is_success
+   return hash ~= self._hash and is_success
 end
 
 function H.Module:get_path()
-   return self.path
+   return self._path
 end
 
 function H.Module:__tostring()
