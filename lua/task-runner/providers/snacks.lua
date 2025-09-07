@@ -9,9 +9,11 @@ function M.pick(opts, filter_module)
       for task_name, _ in pairs(module.tasks) do
          tasks[#tasks + 1] = {
             file = module:get_path(),
-            text = module.name .. ' > ' .. task_name,
+            text = (filter_module == nil and (module.name .. ' > ') or '')
+               .. task_name,
             module_name = module.name,
             task_name = task_name,
+            pos = module:get_position(task_name),
          }
       end
    end
@@ -35,7 +37,6 @@ function M.pick(opts, filter_module)
       show_empty = true,
       -- TODO: Custom format
       format = Snacks.picker.format.text,
-      -- TODO: Add cursor positon
       preview = Snacks.picker.preview.file,
       win = {
          input = { keys = { ['<c-e>'] = { 'edit', mode = { 'n', 'i' } } } },
@@ -44,7 +45,10 @@ function M.pick(opts, filter_module)
       actions = {
          edit = function(picker, item)
             picker:close()
-            vim.cmd.edit(item.file)
+            vim.api.nvim_cmd({
+               cmd = 'edit',
+               args = { '+' .. item.pos[1] .. ' ' .. item.file },
+            }, { output = false })
          end,
          confirm = function(picker, item)
             picker:close()

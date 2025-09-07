@@ -286,6 +286,25 @@ function H.check_modules()
    end
 end
 
+-- TODO: Revise funciton with vim.pos and vim.range
+-- NOTE: vim.pos and vim.range are experimental
+---@param path string
+---@param file TaskRunner.ModuleConfig
+---@return { [string]: TaskRunner.position }
+function H.get_positions(path, file)
+   local positions = {} ---@type { [string]: TaskRunner.position }
+   local tasks = vim.tbl_keys(file.tasks)
+   for i, line in ipairs(vim.fn.readfile(path)) do
+      for j, task in ipairs(tasks) do
+         if string.match(line, '%s' .. task .. ' = {') then
+            positions[task] = { i, 1 }
+            table.remove(tasks, j)
+         end
+      end
+   end
+   return positions
+end
+
 ---@alias TaskRunner.parse_output { __module_name: string, __task_name: string, module: TaskRunner.Module|nil, task: TaskRunner.Task|nil }
 
 ---@param input string
@@ -407,6 +426,8 @@ end
 ---@field is_valid boolean
 H.Module = {}
 
+---@alias TaskRunner.position { [1]: number, [2]: number }
+
 ---@param path string
 ---@param file TaskRunner.ModuleConfig
 ---@param opts? TaskRunner.Module
@@ -420,15 +441,23 @@ function H.Module:new(path, file, opts)
       end,
    }, opts or {})
 
+   local positions = H.get_positions(path, file)
    opts._path = path
    opts._hash = vim.fn.sha256(vim.fn.readblob(path))
    for name, task in pairs(file.tasks) do
-      opts.tasks[name] = H.Task:new(name, task)
+      opts.tasks[name] = H.Task:new(name, positions[name], task)
    end
 
    setmetatable(opts, self)
    self.__index = self
    return opts
+end
+
+---@param task_name string
+---@return TaskRunner.position
+function H.Module:get_position(task_name)
+   local task = self.tasks[task_name]
+   return task == nil and { 0, 0 } or task.pos
 end
 
 ---@return boolean # true if the module's hash is different
@@ -484,18 +513,21 @@ end
 ---@field timeout? integer Run the command with a time limit in ms.
 
 ---@class TaskRunner.Task : TaskRunner.TaskConfig
+---@field pos { [1]: number, [2]: number }
 H.Task = {}
 
 ---@param name string
+---@param pos TaskRunner.position
 ---@param opts TaskRunner.TaskConfig
 ---@return TaskRunner.Task
-function H.Task:new(name, opts)
+function H.Task:new(name, pos, opts)
    opts = vim.tbl_deep_extend('force', {
       name = name,
       command = 'echo',
       args = { 'Testing' },
       cwd = vim.loop.cwd(),
       env = {},
+      pos = pos,
       detached = false,
       on_stdout = function(data)
          H.log(
