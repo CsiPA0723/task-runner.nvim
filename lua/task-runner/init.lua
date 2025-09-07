@@ -191,16 +191,22 @@ function H.execute(input)
       TaskRunner.pick()
    else -- Tasks <module> <task>
       local ret = H.parse(input.args)
-      if ret.module == nil or ret.task == nil then
+      if ret.module ~= nil then
+         if ret.task ~= nil then
+            ret.task:run()
+         elseif ret.__task_name ~= nil then
+            H.log(
+               'No task found!\nNamed: ' .. ret.__task_name,
+               vim.log.levels.ERROR
+            )
+         else
+            TaskRunner.pick(ret.module)
+         end
+      else
          H.log(
-            'Not found ' .. ret.__module_name .. ' - ' .. ret.__task_name,
+            'No module found!\nNamed: ' .. ret.__module_name,
             vim.log.levels.ERROR
          )
-         TaskRunner.pick(ret.module)
-         return
-      end
-      if ret.module ~= nil and ret.task ~= nil then
-         ret.task:run()
       end
    end
 end
