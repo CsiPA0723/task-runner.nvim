@@ -60,6 +60,8 @@ TaskRunner.config = {
       ---Preferred provider: snacks (default) | telescope | fzf_lua | mini
       ---@type TaskRunner.providers
       provider = 'snacks',
+      ---Try to open the picker if module or task not found
+      open_picker_on_fail = true,
    },
    ---Fidget notification options
    notification = {
@@ -194,19 +196,22 @@ function H.execute(input)
       if ret.module ~= nil then
          if ret.task ~= nil then
             ret.task:run()
-         elseif ret.__task_name ~= nil then
+            return
+         end
+         if ret.__task_name ~= nil then
             H.log(
                'No task found!\nNamed: ' .. ret.__task_name,
                vim.log.levels.ERROR
             )
-         else
-            TaskRunner.pick(ret.module)
          end
       else
          H.log(
             'No module found!\nNamed: ' .. ret.__module_name,
             vim.log.levels.ERROR
          )
+      end
+      if H.get_config().options.open_picker_on_fail then
+         TaskRunner.pick(ret.module)
       end
    end
 end
@@ -378,7 +383,7 @@ function H.log(msg, level, opts)
    opts = vim.tbl_extend(
       'force',
       { title = notif.title, group = notif.group },
-      opts
+      opts or {}
    )
    vim.notify(msg, level, opts)
 end
