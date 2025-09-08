@@ -41,5 +41,9 @@ return {
             end
          end,
       },
+      stylua = {
+         command = vim.fn.expand('~/.local/share/nvim/mason/bin/stylua'),
+         args = { vim.fn.expand('%:p') },
+      },
    },
 }
