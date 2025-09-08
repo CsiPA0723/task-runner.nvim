@@ -6,14 +6,14 @@ function M.pick(opts, filter_module)
 
    ---@param module TaskRunner.Module
    local populate_tasks = function(module)
-      for task_name, _ in pairs(module.tasks) do
+      for task_name, task in pairs(module.tasks) do
          tasks[#tasks + 1] = {
             file = module:get_path(),
             text = (filter_module == nil and (module.name .. ' > ') or '')
                .. task_name,
             module_name = module.name,
             task_name = task_name,
-            pos = module:get_position(task_name),
+            pos = { task.pos.row, task.pos.col },
          }
       end
    end

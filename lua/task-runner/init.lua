@@ -1,8 +1,7 @@
 local TaskRunner = {}
 local H = {
-   ---@alias path string
-   ---Keys are the path to the module file
-   ---@type table<path, TaskRunner.Module>
+   ---Indexed by module path
+   ---@type table<string, TaskRunner.Module>
    modules = nil,
    priority = { 'snacks', 'telescope', 'fzf_lua', 'mini' },
    provider_modules = {
@@ -20,6 +19,8 @@ local H = {
 ---@module 'fidget'
 ---@alias TaskRunner.picker fun(opts: TaskRunner.config, module?: TaskRunner.Module)
 ---@alias TaskRunner.providers 'snacks'|'telescope'|'fzf_lua'|'mini'
+---@alias TaskRunner.parse_output { __module_name: string, __task_name: string, module: TaskRunner.Module|nil, task: TaskRunner.Task|nil }
+---@alias TaskRunner.log fun(msg: string, level: vim.log.levels, opts?: Options)
 
 function TaskRunner.setup(config)
    -- Export module
@@ -77,7 +78,7 @@ TaskRunner.config = {
 ---@param path string
 function TaskRunner.load_module(path)
    local config = H.get_config()
-   ---@type boolean, TaskRunner.Module
+   ---@type boolean, TaskRunner.ModuleConfig
    local is_success, file = pcall(dofile, path)
    if not is_success then
       local name = vim.fn.fnamemodify(path, ':t')
@@ -93,8 +94,6 @@ function TaskRunner.load_module(path)
    end
 end
 
----Keys are the path to the module file
----@return table<path, TaskRunner.Module>
 function TaskRunner.get_modules()
    H.check_modules()
    return H.modules
@@ -297,27 +296,6 @@ function H.check_modules()
    end
 end
 
--- TODO: Revise funciton with vim.pos and vim.range
--- NOTE: vim.pos and vim.range are experimental
----@param path string
----@param file TaskRunner.ModuleConfig
----@return { [string]: TaskRunner.position }
-function H.get_positions(path, file)
-   local positions = {} ---@type { [string]: TaskRunner.position }
-   local tasks = vim.tbl_keys(file.tasks)
-   for i, line in ipairs(vim.fn.readfile(path)) do
-      for j, task in ipairs(tasks) do
-         if string.match(line, '%s' .. task .. ' = {') then
-            positions[task] = { i, 1 }
-            table.remove(tasks, j)
-         end
-      end
-   end
-   return positions
-end
-
----@alias TaskRunner.parse_output { __module_name: string, __task_name: string, module: TaskRunner.Module|nil, task: TaskRunner.Task|nil }
-
 ---@param input string
 ---@return TaskRunner.parse_output
 function H.parse(input)
@@ -353,7 +331,7 @@ function H.search_providers()
    else
       if vim.tbl_count(available_providers) == 0 then
          H.log(
-            'No available providers found! Please install one of the following: '
+            'No available providers found!\nPlease install one of the following: '
                .. vim.inspect(H.priority),
             vim.log.levels.ERROR
          )
@@ -375,8 +353,6 @@ function H.search_providers()
    end
 end
 
----@alias TaskRunner.log fun(msg: string, level: vim.log.levels, opts?: Options)
----
 ---@type TaskRunner.log
 function H.log(msg, level, opts)
    local notif = H.get_config().notification
@@ -428,16 +404,16 @@ end
 ---@class TaskRunner.ModuleConfig
 ---@field name? string Defaults to the filename
 ---@field cond? fun(self: TaskRunner.Module): boolean
+---Indexed by task name
 ---@field tasks table<string, TaskRunner.TaskConfig>
 
 ---@class TaskRunner.Module: TaskRunner.ModuleConfig
 ---@field private _path string
 ---@field private _hash string
+---Indexed by task name
 ---@field tasks table<string, TaskRunner.Task>
 ---@field is_valid boolean
 H.Module = {}
-
----@alias TaskRunner.position { [1]: number, [2]: number }
 
 ---@param path string
 ---@param file TaskRunner.ModuleConfig
@@ -452,9 +428,20 @@ function H.Module:new(path, file, opts)
       end,
    }, opts or {})
 
-   local positions = H.get_positions(path, file)
    opts._path = path
    opts._hash = vim.fn.sha256(vim.fn.readblob(path))
+
+   ---@type { [string]: vim.Pos }
+   local positions = {}
+
+   vim.api.nvim_buf_call(vim.api.nvim_create_buf(false, true), function()
+      vim.cmd.read(path)
+      for task_name, _ in pairs(file.tasks) do
+         local pos = vim.fn.searchpos(task_name .. '\\s*=\\s*{', 'nW')
+         positions[task_name] = vim.pos(pos[1] - 1, pos[2])
+      end
+   end)
+
    for name, task in pairs(file.tasks) do
       opts.tasks[name] = H.Task:new(name, positions[name], task)
    end
@@ -462,13 +449,6 @@ function H.Module:new(path, file, opts)
    setmetatable(opts, self)
    self.__index = self
    return opts
-end
-
----@param task_name string
----@return TaskRunner.position
-function H.Module:get_position(task_name)
-   local task = self.tasks[task_name]
-   return task == nil and { 0, 0 } or task.pos
 end
 
 ---@return boolean # true if the module's hash is different
@@ -524,11 +504,11 @@ end
 ---@field timeout? integer Run the command with a time limit in ms.
 
 ---@class TaskRunner.Task : TaskRunner.TaskConfig
----@field pos { [1]: number, [2]: number }
+---@field pos vim.Pos
 H.Task = {}
 
 ---@param name string
----@param pos TaskRunner.position
+---@param pos vim.Pos
 ---@param opts TaskRunner.TaskConfig
 ---@return TaskRunner.Task
 function H.Task:new(name, pos, opts)
