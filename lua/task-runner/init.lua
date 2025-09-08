@@ -516,7 +516,7 @@ function H.Task:new(name, pos, opts)
       name = name,
       command = 'echo',
       args = { 'Testing' },
-      cwd = vim.loop.cwd(),
+      cwd = vim.uv.cwd(),
       env = {},
       pos = pos,
       detached = false,
